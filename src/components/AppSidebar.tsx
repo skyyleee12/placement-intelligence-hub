@@ -32,12 +32,14 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
-                <SidebarMenuButton key={item.url} asChild isActive={path === item.url} tooltip={item.title}>
+                <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton asChild isActive={path === item.url} tooltip={item.title}>
                   <Link to={item.url}>
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
+                </SidebarMenuItem>
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
