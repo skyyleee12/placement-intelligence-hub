@@ -4,8 +4,8 @@ import { Search, X } from "lucide-react";
 import { CompanyCard } from "@/components/CompanyCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { useCompanies } from "@/lib/companyApi";
-import { type CompanySummary, type CompanyType } from "@/lib/companyData";
+import { SEED_COMPANIES } from "@/data/seedCompanies";
+import { normalizeCompanySummary, type CompanySummary, type CompanyType } from "@/lib/companyData";
 import { COLLEGE_NAME, COLLEGE_SHORT } from "@/lib/college";
 import { useCompany } from "@/context/CompanyContext";
 import { cn } from "@/lib/utils";
@@ -37,9 +37,12 @@ function Index() {
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
-  const { data: companies = [], isLoading, isError, refetch } = useCompanies();
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => { const t = setTimeout(() => setLoading(false), 250); return () => clearTimeout(t); }, []);
   useEffect(() => { const t = setTimeout(() => setDebounced(query.trim().toLowerCase()), 200); return () => clearTimeout(t); }, [query]);
+
+  const companies = useMemo(() => SEED_COMPANIES.map((c) => normalizeCompanySummary(c.short_json, c.company_id)), []);
   const searched = useMemo(
     () => companies.filter((c) => !debounced || `${c.name} ${c.shortName} ${c.headquarters}`.toLowerCase().includes(debounced)),
     [companies, debounced],
@@ -98,15 +101,9 @@ function Index() {
           })}
         </div>
 
-        {isLoading ? (
+        {loading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
-          </div>
-        ) : isError ? (
-          <div className="rounded-xl border border-dashed p-10 text-center">
-            <p className="font-heading text-lg font-semibold">Couldn’t load companies</p>
-            <p className="mt-1 text-sm text-muted-foreground">Check your connection and Supabase settings, then try again.</p>
-            <Button className="mt-4" variant="outline" onClick={() => refetch()}>Retry</Button>
           </div>
         ) : shown.length === 0 ? (
           <div className="rounded-xl border border-dashed p-10 text-center">

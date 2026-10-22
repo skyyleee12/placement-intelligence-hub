@@ -1,8 +1,6 @@
-// Holds only the visitor's selected company (persisted in localStorage).
-// Company data itself is fetched per page via the hooks in src/lib/companyApi.ts
-// (Phase 2: Supabase). seedCompanies.ts remains in the repo as a documented fallback
-// but is no longer imported in the live render path.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { SEED_COMPANIES } from "@/data/seedCompanies";
+import { normalizeCompanyProfile, normalizeDashboardSkills, type CompanyProfile, type DashboardSkill } from "@/lib/companyData";
 
 export const STORAGE_KEY = "selected-company";
 export interface SelectedCompany { companyId: number; companyName: string; logoUrl: string }
@@ -10,6 +8,8 @@ export interface SelectedCompany { companyId: number; companyName: string; logoU
 interface Ctx {
   ready: boolean;
   selected: SelectedCompany | null;
+  profile: CompanyProfile | null;
+  skills: DashboardSkill[];
   select: (c: SelectedCompany) => void;
   clear: () => void;
 }
@@ -21,7 +21,7 @@ export function readStoredCompany(): SelectedCompany | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const p = JSON.parse(raw) as SelectedCompany;
-    return typeof p?.companyId === "number" && typeof p?.companyName === "string" ? p : null;
+    return SEED_COMPANIES.some((c) => c.company_id === p.companyId) ? p : null;
   } catch {
     return null;
   }
@@ -45,7 +45,17 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     setSelected(null);
   }, []);
 
-  const value = useMemo<Ctx>(() => ({ ready, selected, select, clear }), [ready, selected, select, clear]);
+  const value = useMemo<Ctx>(() => {
+    const row = selected ? SEED_COMPANIES.find((c) => c.company_id === selected.companyId) : undefined;
+    return {
+      ready,
+      selected,
+      profile: row ? normalizeCompanyProfile(row.full_json, row.short_json, row.company_id) : null,
+      skills: row ? normalizeDashboardSkills(row.skill_levels) : [],
+      select,
+      clear,
+    };
+  }, [ready, selected, select, clear]);
 
   return <CompanyContext.Provider value={value}>{children}</CompanyContext.Provider>;
 }
