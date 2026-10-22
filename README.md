@@ -11,3 +11,11 @@ Routes: `/` (company grid), `/company` → `/company/intelligence`, `/company/sk
 Optional env: `VITE_LOGO_DEV_PUBLISHABLE_KEY` for Logo.dev logos.
 
 Note: built on this project's fixed stack (TanStack Router file routes + Tailwind v4) rather than React Router 6; URLs and behavior are identical.
+
+## Phase 2 — Supabase
+
+Paste `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` into `.env`, then `npm install && npm run dev`. That is the only manual step.
+
+- Read-only. Companies come only from `public.company_json` (`short_json` for cards, `full_json` for the 22-section detail); skills from `company_skill_levels`, `skill_set_master`, `proficiency_levels` and `skill_set_topics`.
+- Data access lives in `src/lib/companyApi.ts` (React Query hooks) on top of `src/lib/supabaseClient.ts`; rows are piped through the unchanged normalizers in `src/lib/companyData.ts`.
+- `src/data/seedCompanies.ts` and `src/data/skillTopics.ts` remain in the repo as a documented fallback but are no longer imported in the live render path.
