@@ -2,8 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { ChevronDown, Lock, CheckCircle2 } from "lucide-react";
 import { CompanyLogo } from "@/components/CompanyLogo";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCompany } from "@/context/CompanyContext";
-import { SKILL_TOPICS } from "@/data/skillTopics";
+import { useCompanyProfile, useCompanySkills } from "@/lib/companyApi";
 import { proficiencyToBloom, scoreToCriticality, type Bloom, type DashboardSkill } from "@/lib/companyData";
 import { cn } from "@/lib/utils";
 
@@ -32,11 +34,10 @@ const CRIT = {
   Baseline: { cls: "text-beginner", desc: "Below 5 — working familiarity" },
 } as const;
 
-function SkillCard({ skill }: { skill: DashboardSkill }) {
+function SkillCard({ skill, topics }: { skill: DashboardSkill; topics: string[] }) {
   const [open, setOpen] = useState(false);
   const bloom = proficiencyToBloom(skill.score);
   const crit = scoreToCriticality(skill.score);
-  const topics = SKILL_TOPICS[skill.id] ?? [];
   return (
     <div className="rounded-xl border bg-card">
       <button onClick={() => setOpen((o) => !o)} className="w-full p-4 text-left" aria-expanded={open}>
@@ -82,8 +83,35 @@ function SkillCard({ skill }: { skill: DashboardSkill }) {
 }
 
 function SkillIntelligence() {
-  const { profile, skills } = useCompany();
+  const { selected } = useCompany();
+  const profileQuery = useCompanyProfile(selected?.companyId);
+  const skillsQuery = useCompanySkills(selected?.companyId);
+
+  if (profileQuery.isLoading || skillsQuery.isLoading) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-4 p-4">
+        <Skeleton className="h-16 rounded-xl" />
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
+        </div>
+      </div>
+    );
+  }
+  if (profileQuery.isError || skillsQuery.isError) {
+    return (
+      <div className="mx-auto max-w-5xl p-4">
+        <div className="rounded-xl border border-dashed p-10 text-center">
+          <p className="font-heading text-lg font-semibold">Couldn’t load skill intelligence</p>
+          <p className="mt-1 text-sm text-muted-foreground">Check your connection and Supabase settings, then try again.</p>
+          <Button className="mt-4" variant="outline" onClick={() => { profileQuery.refetch(); skillsQuery.refetch(); }}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+  const profile = profileQuery.data;
   if (!profile) return null;
+  const skills = skillsQuery.data?.skills ?? [];
+  const topics = skillsQuery.data?.topics ?? {};
   const s = profile.summary;
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4">
@@ -114,7 +142,7 @@ function SkillIntelligence() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {skills.map((sk) => <SkillCard key={sk.id} skill={sk} />)}
+        {skills.map((sk) => <SkillCard key={sk.id} skill={sk} topics={topics[sk.id] ?? []} />)}
       </div>
     </div>
   );

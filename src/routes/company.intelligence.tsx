@@ -2,8 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, Linkedin, Globe, PlayCircle, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CompanyLogo } from "@/components/CompanyLogo";
 import { useCompany } from "@/context/CompanyContext";
+import { useCompanyProfile } from "@/lib/companyApi";
 import { buildIntelligenceSections, type IntelSection } from "@/data/intelligenceData";
 import { isNullish } from "@/lib/companyData";
 import { cn } from "@/lib/utils";
@@ -78,7 +80,8 @@ const SectionCard = memo(function SectionCard({ section, index }: { section: Int
 });
 
 function CompanyIntelligence() {
-  const { profile } = useCompany();
+  const { selected } = useCompany();
+  const { data: profile, isLoading, isError, refetch } = useCompanyProfile(selected?.companyId);
   const sections = useMemo(() => buildIntelligenceSections(profile ?? undefined), [profile]);
   const [active, setActive] = useState(0);
   const isScrollingRef = useRef(false);
@@ -108,6 +111,25 @@ function CompanyIntelligence() {
     window.setTimeout(() => { isScrollingRef.current = false; }, 800);
   }, [sections]);
 
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-4 p-4">
+        <Skeleton className="h-14 rounded-xl" />
+        {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-xl" />)}
+      </div>
+    );
+  }
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-5xl p-4">
+        <div className="rounded-xl border border-dashed p-10 text-center">
+          <p className="font-heading text-lg font-semibold">Couldn’t load this company</p>
+          <p className="mt-1 text-sm text-muted-foreground">Check your connection and Supabase settings, then try again.</p>
+          <Button className="mt-4" variant="outline" onClick={() => refetch()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
   if (!profile) return null;
   const { summary, fields } = profile;
 
